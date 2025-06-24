@@ -156,12 +156,10 @@
         // --- Custom Page Logic ---
         let transactionId = '';
         
-        // This function checks if a real transaction ID is present.
-        // It returns true if the ID is missing or is the placeholder.
         const isTestMode = () => !transactionId || transactionId === 'TEST_TRANSACTION_ID';
 
         const handleFormSubmit = (event) => {
-            event.preventDefault(); // Always prevent the default form submission initially.
+            event.preventDefault(); 
             const completeBtn = document.getElementById('complete-btn');
             const submittedMessageEl = document.getElementById('submitted-message');
 
@@ -169,21 +167,17 @@
             completeBtn.disabled = true;
             submittedMessageEl.style.display = 'block';
 
-            // If we are NOT in test mode (i.e., we have a real transaction ID), redirect.
             if (!isTestMode()) {
                 setTimeout(() => {
                     window.location.href = `https://spectrumsurveys.com/surveydone?st=21&transaction_id=${transactionId}`;
                 }, 1000);
             } else {
-                // In test mode (e.g., on Google Sites), show a confirmation message instead of redirecting.
                 showModal('Test Mode: Completion successful. In a live environment, you would be redirected to Spectrum Surveys (st=21).');
             }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            // Use a placeholder for testing if no transaction_id is in the URL.
-            // This is the key part for testing on platforms like Google Sites.
             transactionId = urlParams.get('transaction_id') || 'TEST_TRANSACTION_ID';
             document.getElementById('transaction_id_field').value = transactionId;
 
@@ -243,15 +237,26 @@
                     const targetPhoneNumber = '8447061334';
                     const phoneFound = lowerCaseText.replace(/[\s()-]/g, '').includes(targetPhoneNumber);
 
-                    const timeRegex = /((\d+)\s*(?:min|minutes))|(?:(\d{1,2}):(\d{2}))/i;
-                    const timeMatch = lowerCaseText.match(timeRegex);
+                    // --- UPDATED TIME DETECTION LOGIC ---
                     let durationSeconds = 0;
-
+                    // 1. Look for "X min" or "X minutes"
+                    let timeMatch = lowerCaseText.match(/(\d+)\s*min(?:ute)?s?/);
                     if (timeMatch) {
-                        if (timeMatch[2]) {
-                            durationSeconds = parseInt(timeMatch[2], 10) * 60;
-                        } else if (timeMatch[3]) {
-                            durationSeconds = parseInt(timeMatch[3], 10) * 60 + parseInt(timeMatch[4], 10);
+                        durationSeconds = parseInt(timeMatch[1], 10) * 60;
+                    } else {
+                        // 2. If no minutes, look for "X sec" or "X seconds"
+                        timeMatch = lowerCaseText.match(/(\d+)\s*sec(?:ond)?s?/);
+                        if (timeMatch) {
+                            durationSeconds = parseInt(timeMatch[1], 10);
+                        } else {
+                            // 3. As a last resort, check for M:SS format
+                            timeMatch = lowerCaseText.match(/(\d{1,2}):(\d{2})/);
+                            if (timeMatch) {
+                                const potentialMinutes = parseInt(timeMatch[1], 10);
+                                if (potentialMinutes <= 59) { // Simple check to avoid timestamps
+                                     durationSeconds = potentialMinutes * 60 + parseInt(timeMatch[2], 10);
+                                }
+                            }
                         }
                     }
 
